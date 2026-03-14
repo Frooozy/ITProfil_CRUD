@@ -67,5 +67,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // PRG Pattern - Redirect [cite: 8, 47, 49, 70]
     header("Location: index.php");
     exit;
-}   
+}
+
+// Načtení zprávy pro zobrazení
+$alert = $_SESSION['msg'] ?? null;
+unset($_SESSION['msg']);
 ?>
+
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>IT Profil 5.0</title>
+    <link rel="stylesheet" href="style.css"> </head>
+<body>
+
+    <h1>Můj IT Profil</h1>
+
+    <?php if ($alert): ?>
+        <div class="alert"><?php echo htmlspecialchars($alert); ?></div> <?php endif; ?>
+
+    <div class="dashboard">
+        <?php 
+        $titles = ['interests' => 'Zájmy', 'projects' => 'Projekty', 'skills' => 'Dovednosti'];
+        foreach ($titles as $cat => $label): 
+        ?>
+            <section>
+                <h2><?php echo $label; ?></h2>
+                
+                <form method="post">
+                    <input type="hidden" name="action" value="add">
+                    <input type="hidden" name="category" value="<?php echo $cat; ?>">
+                    <input type="text" name="value" placeholder="Přidat..." required>
+                    <button type="submit">Přidat</button>
+                </form>
+
+                <ul>
+                    <?php foreach ($data[$cat] as $idx => $item): ?>
+                        <li>
+                            <?php if (isset($_GET['edit']) && $_GET['edit'] === "$cat-$idx"): ?>
+                                <form method="post" class="edit-form">
+                                    <input type="hidden" name="action" value="edit">
+                                    <input type="hidden" name="category" value="<?php echo $cat; ?>">
+                                    <input type="hidden" name="index" value="<?php echo $idx; ?>">
+                                    <input type="text" name="updated_value" value="<?php echo htmlspecialchars($item); ?>">
+                                    <button type="submit">Uložit</button>
+                                </form>
+                            <?php else: ?>
+                                <span><?php echo htmlspecialchars($item); ?></span> <div class="actions">
+                                    <a href="?edit=<?php echo "$cat-$idx"; ?>">Upravit</a> <form method="post" style="display:inline;">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="category" value="<?php echo $cat; ?>">
+                                        <input type="hidden" name="index" value="<?php echo $idx; ?>">
+                                        <button type="submit" class="btn-delete">Smazat</button> </form>
+                                </div>
+                            <?php endif; ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            </section>
+        <?php endforeach; ?>
+    </div>
+
+</body>
+</html>
