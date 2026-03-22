@@ -1,76 +1,128 @@
 <?php
-session_start(); // Nutné pro přenos hlášek přes $_SESSION [cite: 43, 50, 67]
+session_start(); // Spustí session – umožňuje ukládat zprávy mezi načteními stránky
 
-$file = 'profile.json';
+$file = 'profile.json'; // Název souboru, kde jsou uložená data (JSON)
 
 // --- NAČTENÍ DAT ---
+
+// Vytvoří výchozí strukturu dat (pokud soubor ještě neexistuje)
 $data = ['interests' => [], 'projects' => [], 'skills' => []];
+
+// Kontrola, jestli soubor existuje
 if (file_exists($file)) {
-    $json_data = file_get_contents($file); // [cite: 53]
-    $data = array_merge($data, json_decode($json_data, true) ?? []); // [cite: 55]
+
+    $json_data = file_get_contents($file); // Načte obsah JSON souboru do proměnné
+
+    // Převede JSON na PHP pole a spojí ho s výchozími daty
+    $data = array_merge($data, json_decode($json_data, true) ?? []);
 }
-    
+
+// Kontrola, jestli byl odeslán formulář metodou POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
-    $category = $_POST['category'] ?? ''; // Určuje, zda měníme zájmy, projekty nebo dovednosti
-    
+
+    $action = $_POST['action'] ?? ''; // Zjistí, jakou akci chceme provést (add, delete, edit)
+
+    $category = $_POST['category'] ?? ''; // Kategorie dat (interests, projects nebo skills)
+
+    // Kontrola, jestli daná kategorie existuje v poli
     if (isset($data[$category])) {
-        // 1. PŘIDÁNÍ [cite: 4, 14]
+
+        // 1️⃣ PŘIDÁNÍ POLOŽKY
         if ($action === 'add') {
-            $value = trim($_POST['value'] ?? ''); // [cite: 60]
+
+            $value = trim($_POST['value'] ?? ''); // Načte hodnotu z formuláře a odstraní mezery
+
+            // Kontrola, jestli pole není prázdné
             if (empty($value)) {
-                $_SESSION['msg'] = "Pole nesmí být prázdné."; // [cite: 17, 40]
+
+                $_SESSION['msg'] = "Pole nesmí být prázdné."; // Uloží chybovou zprávu
+
             } else {
+
+                // Převede všechny položky na malá písmena (pro kontrolu duplicity)
                 $lower_items = array_map('mb_strtolower', $data[$category]);
-                if (in_array(mb_strtolower($value), $lower_items)) { // [cite: 18, 19, 63]
-                    $_SESSION['msg'] = "Tato položka už existuje."; // [cite: 37]
+
+                // Kontrola, jestli už položka existuje
+                if (in_array(mb_strtolower($value), $lower_items)) {
+
+                    $_SESSION['msg'] = "Tato položka už existuje."; // Zpráva o duplicitě
+
                 } else {
-                    $data[$category][] = $value;
-                    $_SESSION['msg'] = "Položka byla úspěšně přidána."; // [cite: 36]
+
+                    $data[$category][] = $value; // Přidá novou položku do pole
+
+                    $_SESSION['msg'] = "Položka byla úspěšně přidána."; // Potvrzení přidání
                 }
             }
         }
 
-        // 2. MAZÁNÍ [cite: 6, 20]
+        // 2️⃣ MAZÁNÍ POLOŽKY
         if ($action === 'delete') {
-            $index = $_POST['index'] ?? null;
+
+            $index = $_POST['index'] ?? null; // Získá index položky v poli
+
+            // Kontrola, jestli položka existuje
             if (isset($data[$category][$index])) {
-                unset($data[$category][$index]); // [cite: 23, 64]
-                $data[$category] = array_values($data[$category]); // Reindexace [cite: 65]
-                $_SESSION['msg'] = "Položka byla odstraněna."; // [cite: 38]
+
+                unset($data[$category][$index]); // Odstraní položku z pole
+
+                $data[$category] = array_values($data[$category]); // Přeindexuje pole
+
+                $_SESSION['msg'] = "Položka byla odstraněna."; // Zpráva o odstranění
             }
         }
 
-        // 3. EDITACE [cite: 5, 25]
+        // 3️⃣ EDITACE POLOŽKY
         if ($action === 'edit') {
-            $index = $_POST['index'] ?? null;
-            $new_value = trim($_POST['updated_value'] ?? '');
+
+            $index = $_POST['index'] ?? null; // Index upravované položky
+
+            $new_value = trim($_POST['updated_value'] ?? ''); // Nová hodnota z formuláře
+
+            // Kontrola prázdného pole
             if (empty($new_value)) {
-                $_SESSION['msg'] = "Pole nesmí být prázdné."; // [cite: 31, 40]
+
+                $_SESSION['msg'] = "Pole nesmí být prázdné.";
+
             } else {
-                // Kontrola duplicity (mimo editovaný prvek)
+
+                // Vytvoří kopii pole pro kontrolu duplicity
                 $temp = $data[$category];
-                unset($temp[$index]);
+
+                unset($temp[$index]); // Odebere aktuální položku z kontroly
+
+                // Kontrola duplicity
                 if (in_array(mb_strtolower($new_value), array_map('mb_strtolower', $temp))) {
-                    $_SESSION['msg'] = "Tato položka už existuje."; // [cite: 32]
+
+                    $_SESSION['msg'] = "Tato položka už existuje.";
+
                 } else {
-                    $data[$category][$index] = $new_value;
-                    $_SESSION['msg'] = "Položka byla upravena."; // [cite: 39]
+
+                    $data[$category][$index] = $new_value; // Aktualizuje hodnotu
+
+                    $_SESSION['msg'] = "Položka byla upravena."; // Zpráva o úpravě
                 }
             }
         }
 
-        // Uložení změn do souboru [cite: 24, 54, 56]
-        file_put_contents($file, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+        // Uloží změněná data zpět do JSON souboru
+        file_put_contents(
+            $file,
+            json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+        );
     }
 
-    // PRG Pattern - Redirect [cite: 8, 47, 49, 70]
+    // PRG Pattern – přesměruje stránku po odeslání formuláře
+    // zabrání opětovnému odeslání formuláře při refresh
     header("Location: index.php");
-    exit;
+
+    exit; // Ukončí skript
 }
 
-// Načtení zprávy pro zobrazení
+// Načte zprávu ze session pro zobrazení na stránce
 $alert = $_SESSION['msg'] ?? null;
+
+// Po načtení zprávy ji odstraní ze session
 unset($_SESSION['msg']);
 ?>
 

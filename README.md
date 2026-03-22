@@ -29,3 +29,6 @@ array_map(): Umožňuje aplikovat funkci (např. strtolower) na všechny prvky v
 unset($_SESSION['msg']): Smaže konkrétní proměnnou. Používáme ji k tomu, aby se potvrzovací hláška zobrazila jen jednou a po refreshnutí stránky zmizela.
 
 isset(): Ověřuje, zda proměnná existuje a není prázdná. Často používáno u kontroly, zda byl odeslán konkrétní klíč v poli $_POST.
+
+php -S 0.0.0.0:8000
+chmod 666 profile.json
